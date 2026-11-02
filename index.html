@@ -2,13 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="STEL Shuttle Tracker – Khatib MRT ↔ Mandai Depot shuttle bus timetable with live next-bus countdown.">
 
 <title>STEL Shuttle Tracker</title>
 
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 
 <meta name="theme-color" content="#003366">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STEL Bus">
 
 <style>
 
@@ -26,12 +33,18 @@
 --primary:#0b84ff;
 }
 
+*{
+box-sizing:border-box;
+-webkit-tap-highlight-color:transparent;
+}
+
 body{
-font-family:Segoe UI;
+font-family:Segoe UI,system-ui,-apple-system,Roboto,sans-serif;
 background:var(--bg);
 color:var(--text);
 margin:0;
 padding:15px;
+padding-bottom:calc(15px + env(safe-area-inset-bottom));
 transition:.3s;
 }
 
@@ -58,6 +71,7 @@ border-radius:10px;
 cursor:pointer;
 margin:3px;
 font-weight:bold;
+min-height:44px;
 }
 
 .active{
@@ -139,6 +153,69 @@ float:right;
 .installBtn{
 background:green;
 color:white;
+}
+
+/* ---------- Mobile friendly ---------- */
+@media (max-width:600px){
+
+body{
+padding:10px;
+padding-bottom:calc(10px + env(safe-area-inset-bottom));
+}
+
+.header{
+padding:16px 12px;
+border-radius:16px;
+}
+
+.header h2{
+font-size:20px;
+margin:8px 0 4px;
+}
+
+.card{
+padding:12px;
+border-radius:12px;
+}
+
+.card>button{
+width:100%;
+margin:5px 0;
+padding:15px;
+font-size:16px;
+min-height:48px;
+}
+
+.boarding{
+grid-template-columns:1fr;
+}
+
+.big{
+font-size:28px;
+}
+
+.nextbus{
+padding:15px;
+}
+
+.search{
+padding:14px;
+font-size:16px;
+}
+
+table{
+font-size:15px;
+}
+
+th,td{
+padding:9px 6px;
+}
+
+.toggleDark{
+padding:8px 12px;
+min-height:0;
+}
+
 }
 
 </style>
