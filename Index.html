@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>STEL Shuttle Tracker</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#003366">
+
+<style>
+
+:root{
+--bg:#f4f6f9;
+--card:white;
+--text:#222;
+--primary:#003366;
+}
+
+.dark{
+--bg:#121212;
+--card:#1f1f1f;
+--text:#fff;
+--primary:#0b84ff;
+}
+
+body{
+font-family:Segoe UI;
+background:var(--bg);
+color:var(--text);
+margin:0;
+padding:15px;
+transition:.3s;
+}
+
+.header{
+background:linear-gradient(135deg,#003366,#0066cc);
+color:white;
+padding:20px;
+border-radius:20px;
+text-align:center;
+}
+
+.card{
+background:var(--card);
+padding:15px;
+border-radius:15px;
+margin-top:15px;
+box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+margin:3px;
+font-weight:bold;
+}
+
+.active{
+background:#0078d4;
+color:white;
+}
+
+.search{
+width:100%;
+padding:12px;
+border-radius:10px;
+border:1px solid #ccc;
+font-size:16px;
+}
+
+.boarding{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+.point{
+background:#eef7ff;
+padding:15px;
+border-radius:12px;
+}
+
+.nextbus{
+text-align:center;
+padding:20px;
+background:#e7ffe7;
+border-radius:15px;
+}
+
+.big{
+font-size:32px;
+font-weight:bold;
+}
+
+.green{
+background:#d4edda;
+}
+
+.amber{
+background:#fff3cd;
+}
+
+.red{
+background:#f8d7da;
+}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+}
+
+th{
+background:#003366;
+color:white;
+padding:10px;
+}
+
+td{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:center;
+}
+
+.highlight{
+background:#fff6cc;
+font-weight:bold;
+}
+
+.toggleDark{
+float:right;
+}
+
+.installBtn{
+background:green;
+color:white;
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+
+<button class="toggleDark" onclick="toggleDark()">
+🌙
+</button>
+
+<h2>🚌 STEL Shuttle Tracker</h2>
+
+<p>Khatib MRT ↔ Mandai Depot</p>
+
+<button id="installBtn" class="installBtn" style="display:none">
+📱 Install App
+</button>
+
+</div>
+
+<div class="card">
+
+<h3>Schedule Type</h3>
+
+<button id="weekdayBtn">Workday</button>
+<button id="weekendBtn">Weekend / PH</button>
+
+<h3>Route</h3>
+
+<button id="khatibBtn">📍 Khatib ➜ MDD</button>
+<button id="mddBtn">📍 MDD ➜ Khatib</button>
+
+</div>
+
+<div class="card">
+
+<input
+type="text"
+id="search"
+class="search"
+placeholder="🔍 Search Time (e.g. 07)"
+onkeyup="render()">
+
+</div>
+
+<div class="card boarding">
+
+<div class="point">
+📍 <b>Boarding Point</b>
+<div id="fromPoint"></div>
+</div>
+
+<div class="point">
+🏁 <b>Destination</b>
+<div id="toPoint"></div>
+</div>
+
+</div>
+
+<div id="statusCard" class="card nextbus">
+
+<h3>NEXT BUS</h3>
+
+<div id="countdown"></div>
+
+<div id="nextBus" class="big"></div>
+
+<div id="next3"></div>
+
+</div>
+
+<div class="card">
+
+<table>
+
+<thead>
+<tr>
+<th>Departure Time</th>
+</tr>
+</thead>
+
+<tbody id="tbody"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt',(e)=>{
+e.preventDefault();
+
+deferredPrompt=e;
+
+document
+.getElementById('installBtn')
+.style.display='inline-block';
+});
+
+installBtn.onclick=async()=>{
+if(deferredPrompt){
+deferredPrompt.prompt();
+}
+};
+
+const schedules={
+
+weekday:{
+khatib:["06:40","07:00","07:20","07:40","08:00","08:20","08:45","12:20","12:40","13:00","13:20","13:40","14:00","21:00","21:30","22:00","22:30"],
+mdd:["07:00","07:20","07:40","08:00","08:20","11:40","12:00","12:20","12:40","13:00","15:00","16:40","17:00","17:20","17:50","18:00","18:20","18:40","21:15","21:45","22:15","23:05"]
+},
+
+weekend:{
+khatib:["07:00","07:30","08:00","12:45","13:15","14:00","21:00","21:30","22:00"],
+mdd:["07:15","07:45","08:20","13:00","15:00","15:45","16:45","17:45","22:30","23:05"]
+}
+
+};
+
+let mode=
+localStorage.getItem("mode")
+||"weekday";
+
+let route=
+localStorage.getItem("route")
+||"khatib";
+
+function mins(t){
+let p=t.split(":");
+return (+p[0]*60)+(+p[1]);
+}
+
+function render(){
+
+localStorage.setItem("mode",mode);
+localStorage.setItem("route",route);
+
+weekdayBtn.className=
+mode==='weekday'
+?'active':'';
+
+weekendBtn.className=
+mode==='weekend'
+?'active':'';
+
+khatibBtn.className=
+route==='khatib'
+?'active':'';
+
+mddBtn.className=
+route==='mdd'
+?'active':'';
+
+let list=schedules[mode][route];
+
+let now=new Date();
+
+let current=
+now.getHours()*60+
+now.getMinutes();
+
+let future=
+list.filter(
+x=>mins(x)>=current
+);
+
+let next=future[0] || 'No Service';
+
+nextBus.innerHTML=next;
+
+if(next!=="No Service"){
+
+let diff=
+mins(next)-current;
+
+countdown.innerHTML=
+"⏱ Next bus in <b>"+diff+"</b> mins";
+
+if(diff<=10){
+statusCard.className=
+"card nextbus green";
+}
+else if(diff<=30){
+statusCard.className=
+"card nextbus amber";
+}
+else{
+statusCard.className=
+"card nextbus red";
+}
+}
+else{
+countdown.innerHTML=
+"Service Finished";
+}
+
+next3.innerHTML=
+future
+.slice(0,3)
+.join(" • ");
+
+if(route==='khatib'){
+fromPoint.innerHTML=
+"Khatib MRT Exit A";
+
+toPoint.innerHTML=
+"Mandai Depot";
+}
+else{
+fromPoint.innerHTML=
+"Mandai Depot";
+
+toPoint.innerHTML=
+"Khatib MRT Exit A";
+}
+
+let keyword=
+search.value;
+
+let html='';
+
+list
+.filter(x=>x.includes(keyword))
+.forEach(x=>{
+
+html+=`
+<tr class="${
+future.slice(0,3).includes(x)
+?'highlight':''
+}">
+<td>${x}</td>
+</tr>
+`;
+
+});
+
+tbody.innerHTML=html;
+}
+
+weekdayBtn.onclick=()=>{
+mode='weekday';
+render();
+};
+
+weekendBtn.onclick=()=>{
+mode='weekend';
+render();
+};
+
+khatibBtn.onclick=()=>{
+route='khatib';
+render();
+};
+
+mddBtn.onclick=()=>{
+route='mdd';
+render();
+};
+
+function toggleDark(){
+
+document.body.classList.toggle('dark');
+
+localStorage.setItem(
+'theme',
+document.body.classList.contains('dark')
+?'dark'
+:'light'
+);
+
+}
+
+if(localStorage.getItem('theme')==='dark'){
+document.body.classList.add('dark');
+}
+
+render();
+
+setInterval(render,60000);
+
+if('serviceWorker' in navigator){
+navigator.serviceWorker.register('sw.js');
+}
+
+</script>
+
+</body>
+</html>
